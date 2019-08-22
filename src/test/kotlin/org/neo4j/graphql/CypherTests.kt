@@ -9,6 +9,9 @@ class CypherTests {
     @TestFactory
     fun `cypher-directive-tests`() = CypherTestSuite("cypher-directive-tests.adoc").run()
 
+//    @TestFactory
+//    fun `cypher-tests`() = CypherTestSuite("cypher-tests.adoc").run()
+
     @TestFactory
     fun `dynamic-property-tests`() = CypherTestSuite("dynamic-property-tests.adoc").run()
 

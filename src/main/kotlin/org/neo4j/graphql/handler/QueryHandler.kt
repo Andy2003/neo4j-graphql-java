@@ -32,10 +32,10 @@ class QueryHandler private constructor(
 
         fun build(fieldDefinition: FieldDefinition,
                 isQuery: Boolean,
-                metaProvider: MetaProvider,
-                type: NodeFacade = metaProvider.getNodeType(fieldDefinition.type.name())
-                        ?: throw IllegalStateException("cannot find type " + fieldDefinition.type.name())
+                metaProvider: MetaProvider
         ): BaseDataFetcher? {
+            val type: NodeFacade = metaProvider.getNodeType(fieldDefinition.type.name())
+                    ?: return null // TODO cover these use-cases
             val cypherDirective = fieldDefinition.cypherDirective()
             return when {
                 cypherDirective != null -> CypherDirectiveHandler(type, isQuery, cypherDirective, fieldDefinition, metaProvider)

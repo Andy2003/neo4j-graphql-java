@@ -232,7 +232,7 @@ object SchemaBuilder {
                         mergeOperation(mutationDefinition, CreateTypeHandler.build(type, metaProvider))
                     }
                 }
-                mutationDefinition = mergeOperation(mutationDefinition, DeleteHandler.build(type, metaProvider))
+                mutationDefinition = mergeOperation(mutationDefinition, DeleteHandler.build(type, metaProvider, schemaConfig.returnIdOnDelete))
                 mutationDefinition = mergeOperation(mutationDefinition, MergeOrUpdateHandler.build(type, true, metaProvider))
                 mutationDefinition = mergeOperation(mutationDefinition, MergeOrUpdateHandler.build(type, false, metaProvider))
             }

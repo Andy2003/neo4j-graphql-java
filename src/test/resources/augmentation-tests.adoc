@@ -946,6 +946,7 @@ scalar DynamicProperties
 [source,json]
 ----
 {
+  "returnIdOnDelete": true,
   "query": {
     "enabled": false
   },
@@ -1000,31 +1001,31 @@ type Movie {
 }
 
 type Mutation {
-  deleteKnows0(id: ID!): Knows0
+  deleteKnows0(id: ID!): ID
   mergeKnows0(id: ID!, json: DynamicProperties): Knows0!
   updateKnows0(id: ID!, json: DynamicProperties): Knows0
 
-  deleteKnows1(id: ID!): Knows1
+  deleteKnows1(id: ID!): ID
 
   createKnows4(json: DynamicProperties, knows_id: ID!, source_id: ID!): Knows4!
-  deleteKnows4(_id: ID!): Knows4
+  deleteKnows4(_id: ID!): ID
   mergeKnows4(_id: ID!, json: DynamicProperties): Knows4!
   updateKnows4(_id: ID!, json: DynamicProperties): Knows4
 
   createMovie(id: ID!): Movie!
-  deleteMovie(id: ID!): Movie
+  deleteMovie(id: ID!): ID
 
   addMoviePublishedBy(id: ID!, publishedBy: ID!): Movie!
   deleteMoviePublishedBy(id: ID!, publishedBy: ID!): Movie
 
   createPerson5(id: ID!): Person5!
-  deletePerson5(id: ID!): Person5
+  deletePerson5(id: ID!): ID
 
   addPerson5Movies(id: ID!, movies: [ID!]!): Person5!
   deletePerson5Movies(id: ID!, movies: [ID!]!): Person5
 
   createPublisher(name: ID!): Publisher!
-  deletePublisher(name: ID!): Publisher
+  deletePublisher(name: ID!): ID
 }
 
 type Person0 {

@@ -1,6 +1,7 @@
 package org.neo4j.graphql
 
 data class SchemaConfig @JvmOverloads constructor(
+        val returnIdOnDelete: Boolean = false,
         val query: CRUDConfig = CRUDConfig(),
         val mutation: CRUDConfig = CRUDConfig()
 ) {

@@ -49,6 +49,7 @@ class OptimizedFilterHandler(val type: GraphQLFieldsContainer) {
      * @param useDistinct should the current node be distinct (if true: renders WITH DISTINCT currentNode)
      * @param current the current node
      * @param variablePrefix the prefix to prepend to new variables
+     * @param matchQueryWithoutWhere the query to extend
      * @param type the type of <code>current</code>
      * @param value the value passed to the graphQL field
      * @param filterParams the map to store required filter params into
@@ -209,6 +210,57 @@ class OptimizedFilterHandler(val type: GraphQLFieldsContainer) {
                 return passedQuery
             }
             throw OptimizedQueryException("AND / OR filters are currently not implemented. Please provide a test case to help adding further cases.")
+//            var query = passedQuery
+//            val levelPassThroughWiths = parentPassThroughWiths.toCollection(LinkedHashSet())
+//            var condition: Condition? = null
+//            var orTotal: Expression? = null
+//            var andTotal: Expression? = null
+//            val combinationHandler = { index: Int, value: Value<*>, combinationType: String ->
+//                val nestedParsedQuery = ParsedQuery(value as ObjectValue, type)
+//                val prefix = "${variablePrefix}_$combinationType${index + 1}"
+//                val count = Cypher.name(prefix + "_count")
+//                val currentNode = (current as? Node)?.named(prefix) ?: throw OptimizedQueryException()
+//                val nestingLevelHandler = NestingLevelHandler(nestedParsedQuery,
+//                        true,
+//                        currentNode,
+//                        prefix,
+//                        relationship,
+//                        {
+//                            if (nestedParsedQuery.fieldPredicates.isEmpty() && nestedParsedQuery.relationPredicates.isEmpty()){
+//                                query
+//                            } else {
+//                                val r = relationship?.invoke(currentNode) ?: throw OptimizedQueryException()
+//                                query.optionalMatch(r)
+//                            }
+//                        },
+//                        type, value, filterParams, levelPassThroughWiths)
+//                query = nestingLevelHandler.parseFilter({
+//                    withClauseWithOptionalDistinct(it, levelPassThroughWiths + Functions.countDistinct(Cypher.name(prefix)).`as`(count.value))
+//                })
+//                levelPassThroughWiths += count
+//                val newCond = count.gte(Cypher.literalOf(1))
+//                condition = when (combinationType) {
+//                    "or" -> {
+////                        orTotal = orTotal?.add(count) ?: count
+//                        condition?.or(newCond)
+//                    }
+//                    "and" -> {
+////                        andTotal = andTotal?.add(count) ?: count
+//                        condition?.and(newCond)
+//                    }
+//                    else -> throw IllegalArgumentException("$combinationType is not supported")
+//                } ?: newCond
+//            }
+//            parsedQuery.or?.withIndex()?.forEach { (idx, value) -> combinationHandler(idx, value, "or") }
+//            parsedQuery.and?.withIndex()?.forEach { (idx, value) -> combinationHandler(idx, value, "and") }
+//            if (condition == null) {
+//                return query
+//            }
+//            val withs = listOfNotNull(
+//                    orTotal?.`as`(variablePrefix + "_or_count"),
+//                    andTotal?.`as`(variablePrefix + "_and_count")
+//            )
+//            return withClauseWithOptionalDistinct(query.where(condition), parentPassThroughWiths + withs)
         }
 
         private fun totalFilter(relationPredicate: RelationPredicate, relVariableName: String): Pair<SymbolicName, AliasedExpression> {

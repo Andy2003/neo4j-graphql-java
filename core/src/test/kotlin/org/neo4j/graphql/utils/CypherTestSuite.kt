@@ -11,7 +11,7 @@ import java.util.*
 import java.util.concurrent.FutureTask
 import kotlin.streams.toList
 
-class CypherTestSuite(fileName: String) : AsciiDocTestSuite(
+open class CypherTestSuite(fileName: String) : AsciiDocTestSuite(
         fileName,
         listOf(
                 SCHEMA_CONFIG_MARKER,
@@ -73,9 +73,9 @@ class CypherTestSuite(fileName: String) : AsciiDocTestSuite(
 
             val requestParams = codeBlocks[GRAPHQL_VARIABLES_MARKER]?.code()?.parseJsonMap() ?: emptyMap()
 
-            val queryContext = codeBlocks[QUERY_CONFIG_MARKER]?.code()
-                ?.let<String, QueryContext?> { config -> return@let MAPPER.readValue<QueryContext>(config, QueryContext::class.java) }
-                    ?: QueryContext()
+            val config = codeBlocks[QUERY_CONFIG_MARKER]?.code()
+                ?.let<String, QueryContext?> { config -> return@let MAPPER.readValue(config, QueryContext::class.java) }
+            val queryContext = enhanceQueryContext(config, requestParams)
 
             Translator(schema)
                 .translate(request, requestParams, queryContext)
@@ -86,6 +86,8 @@ class CypherTestSuite(fileName: String) : AsciiDocTestSuite(
             transformationTask.get()
         }
     }
+
+    open fun enhanceQueryContext(config: QueryContext?, requestParams: Map<String, Any?>) = config ?: QueryContext()
 
     private fun printGeneratedQuery(result: () -> Cypher): DynamicTest = DynamicTest.dynamicTest("Generated query") {
         println(result().query)

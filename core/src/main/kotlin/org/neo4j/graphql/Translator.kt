@@ -37,7 +37,7 @@ class Translator(val schema: GraphQLSchema) {
 
     @JvmOverloads
     @Throws(OptimizedQueryException::class)
-    fun translate(query: String, params: Map<String, Any?> = emptyMap(), ctx: QueryContext = QueryContext()): List<Cypher> {
+    fun translate(query: String, params: Map<String, Any?> = emptyMap(), ctx: QueryContext = QueryContext(contextParams = params)): List<Cypher> {
         val ast = parse(query) // todo preparsedDocumentProvider
         val fragments = ast.definitions.filterIsInstance<FragmentDefinition>().map { it.name to it }.toMap()
         return ast.definitions.filterIsInstance<OperationDefinition>()

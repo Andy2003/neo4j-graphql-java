@@ -45,16 +45,22 @@ open class ProjectionBase {
     fun where(
             variable: String,
             fieldDefinition: GraphQLFieldDefinition,
-            type: GraphQLFieldsContainer, arguments: List<Argument>,
+            type: GraphQLFieldsContainer,
+            arguments: List<Argument>,
             field: Field,
-            variables: Map<String, Any>
+            env: DataFetchingEnvironment
     ): Cypher {
+
+        val (objectFilterExpression, objectFilterParams) = (env.getLocalContext() as? QueryContext)
+            ?.objectFilter
+            ?.getFilterQuery(variable, type, env)
+            ?.let { listOf(it.query) to it.params } ?: (emptyList<String>() to emptyMap())
 
         val all = preparePredicateArguments(fieldDefinition, arguments)
             .filterNot { listOf(FIRST, OFFSET, ORDER_BY).contains(it.name) }
             .plus(predicateForNeo4jTypes(type, field))
         val (filterExpressions, filterParams) =
-                filterExpressions(all.find { it.name == FILTER }?.value, type, variables)
+                filterExpressions(all.find { it.name == FILTER }?.value, type, env.variables)
                     .map { it.toExpression(variable) }
                     .let { expressions ->
                         expressions.map { it.query } to expressions.fold(emptyMap<String, Any?>()) { res, exp -> res + exp.params }
@@ -67,8 +73,8 @@ open class ProjectionBase {
             else
                 "$variable.${it.toCypherString(variable, false)}"
         }
-        val expression = (eqExpression + filterExpressions).joinNonEmpty(" AND ", " WHERE ")
-        return Cypher(expression, (filterParams + noFilter.map { (k, _, v) -> paramName(variable, k, v) to v }.toMap()))
+        val expression = (objectFilterExpression + eqExpression + filterExpressions).joinNonEmpty(" AND ", " WHERE ")
+        return Cypher(expression, objectFilterParams + (filterParams + noFilter.map { (k, _, v) -> paramName(variable, k, v) to v }.toMap()))
     }
 
     private fun predicateForNeo4jTypes(type: GraphQLFieldsContainer, field: Field): Collection<Translator.CypherArgument> =
@@ -364,7 +370,7 @@ open class ProjectionBase {
 
         val relPattern = if (isRelFromType) "$childVariable:${relInfo.relType}" else ":${relInfo.relType}"
 
-        val where = where(childVariable, fieldDefinition, nodeType, propertyArguments(field), field, env.variables)
+        val where = where(childVariable, fieldDefinition, nodeType, propertyArguments(field), field, env)
 
         val orderBy = getOrderByArgs(field.arguments)
         val sortByNeo4jTypeFields = orderBy

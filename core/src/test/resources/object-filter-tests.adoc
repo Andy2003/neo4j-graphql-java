@@ -1,0 +1,140 @@
+:toc:
+
+= Object Filter Test TCK
+
+== Application code
+
+.Code for applying custom filters
+[source,kotlin,indent=0]
+----
+include::../kotlin/org/neo4j/graphql/CypherTests.kt[tags=example]
+----
+
+== Schema
+
+[source,graphql,schema=true]
+----
+directive @filter(statement: String) on OBJECT | INTERFACE
+
+type Account @filter(statement: "this.userName = $ctxUserName") {
+  userName : String
+}
+type UserData @filter(statement: "(this)-[:BELONGS_TO]->(:Account {userName: $ctxUserName})") {
+  name: String
+  account: Account! @relation(name:"BELONGS_TO")
+  deeperData: DeeperData @relation(name:"OF")
+}
+type DeeperData @filter(statement: "(this)-[:OF]->(:UserData)-[:BELONGS_TO]->(:Account {userName: $ctxUserName})"){
+  foo: String
+}
+----
+
+== Tests
+
+=== Filter deep data
+
+.GraphQL-Query
+[source,graphql]
+----
+{ account { userName }}
+----
+
+.Query variables (provided by server)
+[source,json,request=true]
+----
+{
+  "ctxUserName": "user1"
+}
+----
+
+.Cypher Params
+[source,json]
+----
+{
+  "ctxUserName": "user1"
+}
+----
+
+.Cypher
+[source,cypher]
+----
+MATCH (account:Account)
+WHERE account.userName = $ctxUserName
+RETURN account { .userName } AS account
+----
+
+=== Filter multiple levels
+
+.GraphQL-Query
+[source,graphql]
+----
+{
+  userData {
+    name,
+    account{
+      userName
+    },
+    deeperData{foo}
+  }
+}
+----
+
+.Query variables (provided by server)
+[source,json,request=true]
+----
+{
+  "ctxUserName": "user1"
+}
+----
+
+.Cypher Params
+[source,json]
+----
+{
+  "ctxUserName": "user1"
+}
+----
+
+.Cypher
+[source,cypher]
+----
+MATCH (userData:UserData)
+WHERE (userData)-[:BELONGS_TO]->(:Account {userName: $ctxUserName})
+RETURN userData {
+  .name,
+  account:[(userData)-[:BELONGS_TO]->(userDataAccount:Account) WHERE userDataAccount.userName = $ctxUserName | userDataAccount { .userName }][0],
+  deeperData:[(userData)-[:OF]->(userDataDeeperData:DeeperData) WHERE (userDataDeeperData)-[:OF]->(:UserData)-[:BELONGS_TO]->(:Account {userName: $ctxUserName}) | userDataDeeperData { .foo }][0]
+} AS userData
+----
+
+=== Filter deep data
+
+.GraphQL-Query
+[source,graphql]
+----
+{ deeperData { foo }}
+----
+
+.Query variables (provided by server)
+[source,json,request=true]
+----
+{
+  "ctxUserName": "user1"
+}
+----
+
+.Cypher Params
+[source,json]
+----
+{
+  "ctxUserName": "user1"
+}
+----
+
+.Cypher
+[source,cypher]
+----
+MATCH (deeperData:DeeperData)
+WHERE (deeperData)-[:OF]->(:UserData)-[:BELONGS_TO]->(:Account {userName: $ctxUserName})
+RETURN deeperData { .foo } AS deeperData
+----

@@ -1,0 +1,144 @@
+:toc:
+
+= Github Issue #87: nested null handling / propagation
+
+== Schema
+
+[source,graphql,schema=true]
+----
+type Person {
+    name: String
+    company: Company @relation(name:"WORKS_AT")
+    company2: Company! @relation(name:"WORKS_AT")
+    companies: [Company]! @relation(name:"WORKS_AT")
+    companies2: [Company!]! @relation(name:"WORKS_AT")
+}
+type Company {
+    name: String
+}
+type Query {
+ test:Company @cypher(statement: "call apoc.util.validate(true, \"as\", [])")
+}
+----
+
+== Test Data
+
+[source,cypher,test-data=true]
+----
+CREATE (:Person {name:'Jane'})-[:WORKS_AT]->(:Company {name:'ACME'})
+----
+
+== Test nullable relation
+
+.GraphQL-Query
+[source,graphql]
+----
+{ test { name } }
+#{ person { company(name: "ACME2") { name } } }
+----
+
+.Cypher Params
+[source,json]
+----
+{
+  "personCompanyName" : "ACME2"
+}
+----
+
+.Cypher
+[source,cypher]
+----
+MATCH (person:Person)
+RETURN person {
+	company: [(person)-[:WORKS_AT]->(personCompany:Company) WHERE personCompany.name = $personCompanyName | personCompany {
+		.name
+	}][0]
+} AS person
+----
+
+== Test non-nullable relation
+
+.GraphQL-Query
+[source,graphql]
+----
+{ person { company2(name: "ACME2") { name } } }
+----
+
+.Cypher Params
+[source,json]
+----
+{
+  "fromId" : "1",
+  "toParentCategory" : "2"
+}
+----
+
+.Cypher
+[source,cypher]
+----
+MATCH (from:Category  {
+	id: $fromId
+})
+MATCH (to:Category  {
+	id: $toParentCategory
+})
+MERGE (from)-[:PARENT_CATEGORY]->(to)
+WITH DISTINCT from AS addCategoryParentCategory
+RETURN addCategoryParentCategory {
+	.id
+} AS addCategoryParentCategory
+----
+
+== == Test relations with nullable items
+
+.GraphQL-Query
+[source,graphql]
+----
+{ person { companies(name: "ACME2") { name } } }
+----
+
+.Cypher Params
+[source,json]
+----
+{
+  "personCompaniesName" : "ACME2"
+}
+----
+
+.Cypher
+[source,cypher]
+----
+MATCH (person:Person)
+RETURN person {
+	companies: [(person)-[:WORKS_AT]->(personCompanies:Company) WHERE personCompanies.name = $personCompaniesName | personCompanies {
+		.name
+	}]
+} AS person
+----
+
+== Test relations with non-nullable items
+
+.GraphQL-Query
+[source,graphql]
+----
+{ person { companies2(name: "ACME2") { name } } }
+----
+
+.Cypher Params
+[source,json]
+----
+{
+  "personCompanies2Name" : "ACME2"
+}
+----
+
+.Cypher
+[source,cypher]
+----
+MATCH (person:Person)
+RETURN person {
+	companies2: [(person)-[:WORKS_AT]->(personCompanies2:Company) WHERE personCompanies2.name = $personCompanies2Name | personCompanies2 {
+		.name
+	}]
+} AS person
+----

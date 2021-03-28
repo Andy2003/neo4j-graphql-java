@@ -1,7 +1,12 @@
 package org.neo4j.graphql
 
+import org.junit.jupiter.api.DynamicContainer
+import org.junit.jupiter.api.DynamicNode
 import org.junit.jupiter.api.TestFactory
 import org.neo4j.graphql.utils.CypherTestSuite
+import java.nio.file.Files
+import java.nio.file.Paths
+import java.util.stream.Stream
 
 class CypherTests {
 
@@ -40,4 +45,15 @@ class CypherTests {
 
     @TestFactory
     fun `custom-fields`() = CypherTestSuite("custom-fields.adoc").generateTests()
+
+    @TestFactory
+    fun `new cypher tck tests`(): Stream<DynamicNode>? = Files
+        .list(Paths.get("src/test/resources/tck-test-files/cypher"))
+        .map {
+            DynamicContainer.dynamicContainer(
+                    it.fileName.toString(),
+                    it.toUri(),
+                    CypherTestSuite("tck-test-files/cypher/${it.fileName}").generateTests()
+            )
+        }
 }

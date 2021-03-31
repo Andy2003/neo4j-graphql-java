@@ -24,7 +24,8 @@ type Movie {
 [source,json,schema-config=true]
 ----
 {
-  "queryOptionStyle": "INPUT_TYPE"
+  "queryOptionStyle": "INPUT_TYPE",
+  "mutationInputStyle": "INPUT_TYPE"
 }
 ----
 
@@ -48,8 +49,8 @@ type Movie {
 }
 
 type Mutation {
-  createActor(name: String): Actor!
-  createMovie(id: ID): Movie!
+  createActor(input: ActorCreateInput): Actor!
+  createMovie(input: MovieCreateInput): Movie!
   "Deletes Movie and returns the type itself"
   deleteMovie(id: ID): Movie
 }
@@ -173,6 +174,10 @@ enum SortDirection {
 
 scalar DynamicProperties
 
+input ActorCreateInput {
+  name: String
+}
+
 input ActorOptions {
   "Defines the maximum amount of records returned"
   limit: Int
@@ -185,6 +190,10 @@ input ActorOptions {
 "Fields to sort Actors by. The order in which sorts are applied is not guaranteed when specifying many fields in one MovieSort object."
 input ActorSort {
   name: SortDirection
+}
+
+input MovieCreateInput {
+  id: ID
 }
 
 input MovieOptions {

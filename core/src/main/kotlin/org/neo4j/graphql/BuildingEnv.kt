@@ -22,17 +22,27 @@ class BuildingEnv(
             nullableResult: Boolean,
             forceOptionalProvider: (field: GraphQLFieldDefinition) -> Boolean = { false }
     ): GraphQLFieldDefinition.Builder {
+        val arguments = getArguments(scalarFields, forceOptionalProvider)
+        return buildFieldDefinition(prefix, resultType, arguments, nullableResult)
+    }
+
+    fun buildFieldDefinition(
+            prefix: String,
+            resultType: GraphQLOutputType,
+            arguments: List<GraphQLArgument>,
+            nullableResult: Boolean)
+    : GraphQLFieldDefinition.Builder {
         var type: GraphQLOutputType = resultType
         if (!nullableResult) {
             type = GraphQLNonNull(type)
         }
         return GraphQLFieldDefinition.newFieldDefinition()
             .name("$prefix${resultType.name()}")
-            .arguments(getInputValueDefinitions(scalarFields, forceOptionalProvider))
+            .arguments(arguments)
             .type(type.ref() as GraphQLOutputType)
     }
 
-    fun getInputValueDefinitions(
+    fun getArguments(
             relevantFields: List<GraphQLFieldDefinition>,
             forceOptionalProvider: (field: GraphQLFieldDefinition) -> Boolean): List<GraphQLArgument> {
         return relevantFields.map { field ->
@@ -215,13 +225,13 @@ class BuildingEnv(
         return orderingName
     }
 
-    fun addInputType(inputName: String, relevantFields: List<GraphQLFieldDefinition>): GraphQLInputType {
+    fun addInputType(inputName: String, relevantFields: List<GraphQLFieldDefinition>, makeOptional: Boolean = true): GraphQLInputType {
         var inputType = types[inputName]
         if (inputType != null) {
             return inputType as? GraphQLInputType
                     ?: throw IllegalStateException("Filter type $inputName is already defined but not an input type")
         }
-        inputType = getInputType(inputName, relevantFields)
+        inputType = getInputType(inputName, relevantFields, makeOptional)
         types[inputName] = inputType
         return inputType
     }
@@ -230,17 +240,19 @@ class BuildingEnv(
         return typesForRelation[nameOfRelation]?.let { types[it] } as? GraphQLObjectType
     }
 
-    private fun getInputType(inputName: String, relevantFields: List<GraphQLFieldDefinition>): GraphQLInputObjectType {
+    private fun getInputType(inputName: String, relevantFields: List<GraphQLFieldDefinition>, makeOptional: Boolean): GraphQLInputObjectType {
         return GraphQLInputObjectType.newInputObject()
             .name(inputName)
-            .fields(getInputValueDefinitions(relevantFields))
+            .fields(getInputValueDefinitions(relevantFields, makeOptional))
             .build()
     }
 
-    private fun getInputValueDefinitions(relevantFields: List<GraphQLFieldDefinition>): List<GraphQLInputObjectField> {
+    private fun getInputValueDefinitions(relevantFields: List<GraphQLFieldDefinition>, makeOptional: Boolean): List<GraphQLInputObjectField> {
         return relevantFields.map {
-            // just make evrything optional
-            val type = (it.type as? GraphQLNonNull)?.wrappedType ?: it.type
+            val type = when {
+                makeOptional -> (it.type as? GraphQLNonNull)?.wrappedType ?: it.type
+                else -> it.type
+            }
             GraphQLInputObjectField
                 .newInputObjectField()
                 .name(it.name)

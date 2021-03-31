@@ -21,8 +21,17 @@ class CreateTypeHandler private constructor(
                 return
             }
             val relevantFields = getRelevantFields(type)
+
+            val arguments = if (schemaConfig.mutationInputStyle == SchemaConfig.InputStyle.INPUT_TYPE){
+                val inputName = normalizeName(type.name(), "CreateInput").capitalize()
+                val inputType = buildingEnv.addInputType(inputName, relevantFields, makeOptional = false)
+                listOf(input( "input", GraphQLNonNull(GraphQLList(GraphQLNonNull(inputType)))))
+            } else {
+                buildingEnv.getArguments(relevantFields){false}
+            }
+
             val fieldDefinition = buildingEnv
-                .buildFieldDefinition("create", type, relevantFields, nullableResult = false)
+                .buildFieldDefinition("create", type, arguments, nullableResult = false)
                 .build()
 
             buildingEnv.addMutationField(fieldDefinition)

@@ -1,10 +1,7 @@
 package org.neo4j.graphql.handler
 
 import graphql.language.Field
-import graphql.schema.DataFetcher
-import graphql.schema.DataFetchingEnvironment
-import graphql.schema.GraphQLFieldDefinition
-import graphql.schema.GraphQLFieldsContainer
+import graphql.schema.*
 import org.neo4j.cypherdsl.core.Node
 import org.neo4j.cypherdsl.core.Relationship
 import org.neo4j.cypherdsl.core.Statement
@@ -30,15 +27,30 @@ class MergeOrUpdateHandler private constructor(
             }
 
             val relevantFields = type.relevantFields()
-            val mergeField = buildingEnv
-                .buildFieldDefinition("merge", type, relevantFields, nullableResult = false)
-                .build()
-            buildingEnv.addMutationField(mergeField)
 
-            val updateField = buildingEnv
-                .buildFieldDefinition("update", type, relevantFields, nullableResult = true)
-                .build()
-            buildingEnv.addMutationField(updateField)
+            if (schemaConfig.mutationInputStyle == SchemaConfig.InputStyle.INPUT_TYPE){
+                val inputName = normalizeName(type.name(), "UpdateInput").capitalize()
+                val inputType = buildingEnv.addInputType(inputName, relevantFields, makeOptional = true)
+                val updateField =  buildingEnv
+                    .buildFieldDefinition("update", type, listOf(
+                            input("where", ),
+                            input("update", inputType)
+                    ))
+                    .build()
+                buildingEnv.addMutationField(updateField)
+
+            } else {
+                val mergeField = buildingEnv
+                    .buildFieldDefinition("merge", type, relevantFields, nullableResult = false)
+                    .build()
+                buildingEnv.addMutationField(mergeField)
+
+                val updateField = buildingEnv
+                    .buildFieldDefinition("update", type, relevantFields, nullableResult = true)
+                    .build()
+                buildingEnv.addMutationField(updateField)
+            }
+
         }
 
         override fun createDataFetcher(operationType: OperationType, fieldDefinition: GraphQLFieldDefinition): DataFetcher<Cypher>? {

@@ -32,7 +32,7 @@ class QueryHandler private constructor(
             val builder = GraphQLFieldDefinition
                 .newFieldDefinition()
                 .name(if (schemaConfig.capitalizeQueryFields) typeName else typeName.decapitalize())
-                .arguments(buildingEnv.getInputValueDefinitions(relevantFields) { true })
+                .arguments(buildingEnv.getArguments(relevantFields) { true })
                 .argument(input(FILTER, GraphQLTypeReference(filterTypeName)))
                 .type(GraphQLNonNull(GraphQLList(GraphQLNonNull(GraphQLTypeReference(type.name)))))
 

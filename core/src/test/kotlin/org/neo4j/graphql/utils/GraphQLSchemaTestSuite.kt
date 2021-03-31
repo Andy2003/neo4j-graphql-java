@@ -61,9 +61,7 @@ class GraphQLSchemaTestSuite(fileName: String) : AsciiDocTestSuite(
                     Assumptions.assumeFalse(true, e.message)
                 } else {
                     val actualSchema = SCHEMA_PRINTER.print(augmentedSchema)
-                    targetSchemaBlock.adjustedCode = actualSchema + "\n" +
-                            // this is added since the SCHEMA_PRINTER is not able to print global directives
-                            javaClass.getResource("/lib_directives.graphql").readText()
+                    targetSchemaBlock.adjustedCode = actualSchema
                     throw AssertionFailedError("augmented schema differs for '$title'",
                             expectedSchema?.let { SCHEMA_PRINTER.print(it) } ?: targetSchema,
                             actualSchema,

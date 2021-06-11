@@ -31,3 +31,4 @@ fun String.toCamelCase(): String = Regex("[\\W_]([a-z])").replace(this) { it.gro
 fun <T> Optional<T>.unwrap(): T? = orElse(null)
 
 fun String.asDescription() = Description(this, null, this.contains("\n"))
+fun String.uppercase(uppercase:Boolean) = if (uppercase) this.toUpperCase() else this

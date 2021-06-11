@@ -119,8 +119,20 @@ class SchemaBuilder(
             .filter { it.name == queryTypeName || it.name == mutationTypeName || it.name == subscriptionTypeName }
             .forEach { type -> handler.forEach { h -> h.augmentType(type) } }
 
-        // TODO copy over only the types used in the source schema
-        typeDefinitionRegistry.merge(neo4jTypeDefinitionRegistry)
+        typeDefinitionRegistry.types()
+            .values
+            .flatMap { typeDefinition ->
+                when (typeDefinition) {
+                    is ImplementingTypeDefinition -> typeDefinition.fieldDefinitions
+                        .flatMap { fieldDefinition -> fieldDefinition.inputValueDefinitions.map { it.type } + fieldDefinition.type }
+                    is InputObjectTypeDefinition -> typeDefinition.inputValueDefinitions.map { it.type }
+                    else -> emptyList()
+                }
+            }
+            .map { TypeName(it.name()) }
+            .filterNot { typeDefinitionRegistry.hasType(it) }
+            .mapNotNull { neo4jTypeDefinitionRegistry.getType(it).unwrap() }
+            .forEach { typeDefinitionRegistry.add(it) }
     }
 
     /**

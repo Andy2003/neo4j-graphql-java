@@ -96,20 +96,6 @@ enum class FieldOperator(
 
     companion object {
 
-        fun resolve(queriedField: String, field: GraphQLFieldDefinition, value: Any?): FieldOperator? {
-            val fieldName = field.name
-            if (value == null) {
-                return listOf(IS_NULL, IS_NOT_NULL).find { queriedField == fieldName + it.suffix }
-            }
-            val ops = enumValues<FieldOperator>().filterNot { it == IS_NULL || it == IS_NOT_NULL }
-            return ops.find { queriedField == fieldName + it.suffix }
-                    ?: if (field.type.isNeo4jSpatialType()) {
-                        ops.find { queriedField == fieldName + NEO4j_POINT_DISTANCE_FILTER_SUFFIX + it.suffix }
-                    } else {
-                        null
-                    }
-        }
-
         fun forType(type: TypeDefinition<*>, isNeo4jType: Boolean): List<FieldOperator> =
                 when {
                     type.name == TypeBoolean.name -> listOf(EQ, NEQ)
@@ -125,7 +111,7 @@ enum class FieldOperator(
                 }
     }
 
-    fun fieldName(fieldName: String) = fieldName + suffix
+    fun fieldName(fieldName: String, uppercase: Boolean) = fieldName + suffix.uppercase(uppercase)
 }
 
 enum class RelationOperator(val suffix: String, val op: String) {
@@ -140,7 +126,7 @@ enum class RelationOperator(val suffix: String, val op: String) {
     EQ_OR_NOT_EXISTS("", ""),
     NOT("_not", "");
 
-    fun fieldName(fieldName: String) = fieldName + suffix
+    fun fieldName(fieldName: String, uppercase:Boolean) = fieldName + suffix.uppercase(uppercase)
 
     fun harmonize(type: GraphQLFieldsContainer, field: GraphQLFieldDefinition, value: Value<*>, queryFieldName: String) = when (field.type.isList()) {
         true -> when (this) {
@@ -185,11 +171,11 @@ enum class RelationOperator(val suffix: String, val op: String) {
     companion object {
         private val LOGGER = LoggerFactory.getLogger(RelationOperator::class.java)
 
-        fun createRelationFilterFields(type: TypeDefinition<*>, field: FieldDefinition, filterType: String, builder: InputObjectTypeDefinition.Builder) {
+        fun createRelationFilterFields(type: TypeDefinition<*>, field: FieldDefinition, filterType: String, builder: InputObjectTypeDefinition.Builder, uppercaseOperators: Boolean) {
             val list = field.type.isList()
 
             val addFilterField = { op: RelationOperator, description: String ->
-                builder.addFilterField(op.fieldName(field.name), false, filterType, description.asDescription())
+                builder.addFilterField(op.fieldName(field.name, uppercaseOperators), false, filterType, description.asDescription())
             }
 
             addFilterField(EQ_OR_NOT_EXISTS, "Filters only those `${type.name}` for which ${if (list) "all" else "the"} `${field.name}`-relationship matches this filter. " +
@@ -207,7 +193,7 @@ enum class RelationOperator(val suffix: String, val op: String) {
                 // n..1
                 addFilterField(SINGLE, "@deprecated Use the `${field.name}`-field directly (without any suffix)")
                 addFilterField(SOME, "@deprecated Use the `${field.name}`-field directly (without any suffix)")
-                addFilterField(NONE, "@deprecated Use the `${field.name}${NOT.suffix}`-field")
+                addFilterField(NONE, "@deprecated Use the `${field.name}${NOT.suffix.uppercase(uppercaseOperators)}`-field")
             }
         }
     }

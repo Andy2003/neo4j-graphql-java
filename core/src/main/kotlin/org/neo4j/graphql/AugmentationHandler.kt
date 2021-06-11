@@ -144,14 +144,15 @@ abstract class AugmentationHandler(
                 }
 
                 if (field.isRelationship()) {
-                    RelationOperator.createRelationFilterFields(type, field, filterType, builder)
+                    RelationOperator.createRelationFilterFields(type, field, filterType, builder, schemaConfig.uppercaseOperators)
                 } else {
                     FieldOperator.forType(typeDefinition, field.type.inner().isNeo4jType())
-                        .forEach { op -> builder.addFilterField(op.fieldName(field.name), op.list, filterType, field.description) }
+                        .forEach { op -> builder.addFilterField(op.fieldName(field.name, schemaConfig.uppercaseOperators), op.list, filterType, field.description) }
                     if (typeDefinition.isNeo4jSpatialType() == true) {
                         val distanceFilterType = getSpatialDistanceFilter(neo4jTypeDefinitionRegistry.getUnwrappedType(filterType) as TypeDefinition<*>)
                         FieldOperator.forType(distanceFilterType, true)
-                            .forEach { op -> builder.addFilterField(op.fieldName(field.name + NEO4j_POINT_DISTANCE_FILTER_SUFFIX), op.list, NEO4j_POINT_DISTANCE_FILTER) }
+                            .forEach { op -> builder.addFilterField(op.fieldName(field.name +
+                                    NEO4j_POINT_DISTANCE_FILTER_SUFFIX.uppercase( schemaConfig.uppercaseOperators),  schemaConfig.uppercaseOperators), op.list, NEO4j_POINT_DISTANCE_FILTER) }
                     }
                 }
 

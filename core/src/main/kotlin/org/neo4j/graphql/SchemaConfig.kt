@@ -5,12 +5,12 @@ data class SchemaConfig @JvmOverloads constructor(
         val mutation: CRUDConfig = CRUDConfig(),
 
         /**
-         * if true, the top level fields of the Query-type will be capitalized
+         * If true, the top level fields of the Query-type will be capitalized
          */
         val capitalizeQueryFields: Boolean = false,
 
         /**
-         * if true, the generated fields for query or mutation will use the plural of the types name
+         * If true, the generated fields for query or mutation will use the plural of the types name
          */
         val pluralizeFields: Boolean = false,
 
@@ -20,15 +20,21 @@ data class SchemaConfig @JvmOverloads constructor(
         val queryOptionStyle: InputStyle = InputStyle.ARGUMENT_PER_FIELD,
 
         /**
-         * if enabled the `filter` argument will be named `where` and the input type will be named `<typeName>Where`.
+         * If enabled the `filter` argument will be named `where` and the input type will be named `<typeName>Where`.
          * additionally the separated filter arguments will no longer be generated.
          */
         val useWhereFilter: Boolean = false,
 
         /**
-         * if enabled the `Date`, `Time`, `LocalTime`, `DateTime` and `LocalDateTime` are used as scalars
+         * If enabled the `Date`, `Time`, `LocalTime`, `DateTime` and `LocalDateTime` are used as scalars
          */
         val useTemporalScalars: Boolean = false,
+
+        /**
+         * If enabled `update` and `delete` mutations will use a filter, and creation will accept an input array.
+         * Enabling this will enforce `queryOptionStyle` to be `INPUT_TYPE`
+         */
+        val useBatchMutations: Boolean = false,
 ) {
     data class CRUDConfig(val enabled: Boolean = true, val exclude: List<String> = emptyList())
 

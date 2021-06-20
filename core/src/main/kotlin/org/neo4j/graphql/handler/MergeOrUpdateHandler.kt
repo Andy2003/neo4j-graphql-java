@@ -1,13 +1,12 @@
 package org.neo4j.graphql.handler
 
-import graphql.language.Field
-import graphql.language.FieldDefinition
-import graphql.language.ImplementingTypeDefinition
+import graphql.language.*
 import graphql.schema.DataFetcher
 import graphql.schema.DataFetchingEnvironment
 import graphql.schema.GraphQLFieldDefinition
 import graphql.schema.GraphQLType
 import graphql.schema.idl.TypeDefinitionRegistry
+import org.atteo.evo.inflector.English
 import org.neo4j.cypherdsl.core.Node
 import org.neo4j.cypherdsl.core.Relationship
 import org.neo4j.cypherdsl.core.Statement
@@ -32,15 +31,31 @@ class MergeOrUpdateHandler private constructor(private val merge: Boolean, schem
             if (!canHandle(type)) {
                 return
             }
-
             val relevantFields = type.getScalarFields()
-            val mergeField = buildFieldDefinition("merge", type, relevantFields, nullableResult = false)
-                .build()
-            addMutationField(mergeField)
+            if (schemaConfig.queryOptionStyle == SchemaConfig.InputStyle.INPUT_TYPE) {
+                val inputName = type.name + "UpdateInput"
+                val plural = English.plural(type.name).capitalize()
+                addInputType(inputName, getInputValueDefinitions(relevantFields, { true }))
+                val response = addMutationResponse("Update", type).name
+                val filter = addFilterType(type)
+                val updateField = FieldDefinition.newFieldDefinition()
+                    .name("${"update"}${plural}")
+                    .inputValueDefinitions(listOf(
+                            input(if (schemaConfig.useWhereFilter) WHERE else FILTER, NonNullType(TypeName(filter))),
+                            input("update", NonNullType(TypeName(inputName)))
+                    ))
+                    .type(NonNullType(TypeName(response)))
+                    .build()
+                addMutationField(updateField)
+            } else {
+                val mergeField = buildFieldDefinition("merge", type, relevantFields, nullableResult = false)
+                    .build()
+                addMutationField(mergeField)
 
-            val updateField = buildFieldDefinition("update", type, relevantFields, nullableResult = true)
-                .build()
-            addMutationField(updateField)
+                val updateField = buildFieldDefinition("update", type, relevantFields, nullableResult = true)
+                    .build()
+                addMutationField(updateField)
+            }
         }
 
         override fun createDataFetcher(operationType: OperationType, fieldDefinition: FieldDefinition): DataFetcher<Cypher>? {
@@ -54,12 +69,15 @@ class MergeOrUpdateHandler private constructor(private val merge: Boolean, schem
             if (!canHandle(type)) {
                 return null
             }
-            type.getIdField() ?: return null
-            return when (fieldDefinition.name) {
-                "merge${type.name}" -> MergeOrUpdateHandler(true, schemaConfig)
-                "update${type.name}" -> MergeOrUpdateHandler(false, schemaConfig)
-                else -> null
+            if (schemaConfig.queryOptionStyle == SchemaConfig.InputStyle.INPUT_TYPE) {
+                if (fieldDefinition.name == "update${English.plural(type.name)}") return MergeOrUpdateHandler(false, schemaConfig)
+            } else {
+                when (fieldDefinition.name) {
+                    "merge${type.name}" -> return MergeOrUpdateHandler(true, schemaConfig)
+                    "update${type.name}" -> return MergeOrUpdateHandler(false, schemaConfig)
+                }
             }
+            return null
         }
 
         private fun canHandle(type: ImplementingTypeDefinition<*>): Boolean {
@@ -67,7 +85,7 @@ class MergeOrUpdateHandler private constructor(private val merge: Boolean, schem
             if (!schemaConfig.mutation.enabled || schemaConfig.mutation.exclude.contains(typeName) || isRootType(type)) {
                 return false
             }
-            if (type.getIdField() == null) {
+            if (type.getIdField() == null && schemaConfig.queryOptionStyle != SchemaConfig.InputStyle.INPUT_TYPE) {
                 return false
             }
             if (type.getScalarFields().none { !it.type.inner().isID() }) {

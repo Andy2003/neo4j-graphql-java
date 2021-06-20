@@ -1,13 +1,11 @@
 package org.neo4j.graphql.handler
 
-import graphql.language.Field
-import graphql.language.FieldDefinition
-import graphql.language.ImplementingTypeDefinition
-import graphql.language.InterfaceTypeDefinition
+import graphql.language.*
 import graphql.schema.DataFetcher
 import graphql.schema.DataFetchingEnvironment
 import graphql.schema.GraphQLObjectType
 import graphql.schema.idl.TypeDefinitionRegistry
+import org.atteo.evo.inflector.English
 import org.neo4j.cypherdsl.core.Statement
 import org.neo4j.cypherdsl.core.StatementBuilder
 import org.neo4j.graphql.*
@@ -28,8 +26,20 @@ class CreateTypeHandler private constructor(schemaConfig: SchemaConfig) : BaseDa
                 return
             }
             val relevantFields = getRelevantFields(type)
-            val fieldDefinition = buildFieldDefinition("create", type, relevantFields, nullableResult = false)
-                .build()
+            val fieldDefinition = if (schemaConfig.queryOptionStyle == SchemaConfig.InputStyle.INPUT_TYPE) {
+                val inputName = type.name + "CreateInput"
+                val plural = English.plural(type.name).capitalize()
+                addInputType(inputName, getInputValueDefinitions(relevantFields, { false }))
+                val response = addMutationResponse("Create", type).name
+                FieldDefinition.newFieldDefinition()
+                    .name("${"create"}${plural}")
+                    .inputValueDefinitions(listOf(input("input", NonNullType(ListType(NonNullType(TypeName(inputName)))))))
+                    .type(NonNullType(TypeName(response)))
+                    .build()
+            } else {
+                buildFieldDefinition("create", type, relevantFields, nullableResult = false)
+                    .build()
+            }
 
             addMutationField(fieldDefinition)
         }
@@ -45,10 +55,12 @@ class CreateTypeHandler private constructor(schemaConfig: SchemaConfig) : BaseDa
             if (!canHandle(type)) {
                 return null
             }
-            return when (fieldDefinition.name) {
-                "create${type.name}" -> CreateTypeHandler(schemaConfig)
-                else -> null
+            if (schemaConfig.queryOptionStyle == SchemaConfig.InputStyle.INPUT_TYPE) {
+                if (fieldDefinition.name == "create${English.plural(type.name)}") return CreateTypeHandler(schemaConfig)
+            } else {
+                if (fieldDefinition.name == "create${type.name}") return CreateTypeHandler(schemaConfig)
             }
+            return null
         }
 
         private fun getRelevantFields(type: ImplementingTypeDefinition<*>): List<FieldDefinition> {
